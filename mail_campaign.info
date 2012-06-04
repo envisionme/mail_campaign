@@ -1,0 +1,12 @@
+name = Mail Campaign
+description = "Allows for creation of email campaigns"
+
+; Core version (required)
+core = 6.x
+
+; Package name (see http://drupal.org/node/101009 for a list of names)
+package = Mail
+version = "6.x-1.0"
+; Module dependencies
+dependencies[] = mail_template
+dependencies[] = job_queue

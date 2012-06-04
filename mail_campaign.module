@@ -1,0 +1,323 @@
+<?php
+// $Id$
+
+function mail_campaign_menu() {
+  $items = array();
+
+  $items['admin/build/mail_campaign'] = array(
+    'title' => t('Email campaigns'),
+    'page callback' => 'mail_campaign_admin_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'description' => 'Configure email campaigns.',
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+    
+  $items['admin/build/mail_campaign/%mail_campaign/view'] = array(
+    'title' => t('View'),
+    'page callback' => 'mail_campaign_campaign_admin',
+    'page arguments' => array(4),
+    'access callback' => 'user_access',
+    'access arguments' => array('use mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -1,
+  );   
+  
+  $items['admin/build/mail_campaign/%mail_campaign/edit'] = array(
+    'title' => t('Edit'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mail_campaign_add_form', 3),
+    'access callback' => 'user_access',
+    'access arguments' => array('use mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 0,
+  );  
+
+  $items['admin/build/mail_campaign/%mail_campaign/emails'] = array(
+    'title' => t('Emails'),
+    'page callback' => 'mail_campaign_email_admin_page',
+    'page arguments' => array(3),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+  );
+  
+  $items['admin/build/mail_campaign/%mail_campaign/subscriptions'] = array(
+    'title' => t('Subscriptions'),
+    'page callback' => 'mail_campaign_subscriptions_admin_page',
+    'page arguments' => array(3),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+  );  
+  
+  $items['admin/build/mail_campaign/add'] = array(
+    'title' => t('Add campaign'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mail_campaign_add_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_CALLBACK,
+  );  
+  
+  $items['admin/build/mail_campaign/%mail_campaign/emails/add'] = array(
+    'title' => t('Add campaign email'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mail_campaign_email_add_form', 3),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_CALLBACK,
+  );  
+  
+  $items['admin/build/mail_campaign/%mail_campaign/emails/edit/%mail_campaign_mail_template'] = array(
+    'title' => t('Add campaign email'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mail_campaign_email_add_form', 6),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_CALLBACK,
+  );    
+
+  $items['admin/build/mail_campaign/%mail_campaign/emails/remove/%mail_campaign_mail_template'] = array(
+    'title' => t('Remove email from campaign'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mail_campaign_remove_email_confirm', 6),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_CALLBACK,
+  );    
+
+  
+  $items['admin/build/mail_campaign/delete/%'] = array(
+    'title' => 'Delete email campaign(s)',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mail_campaign_delete_confirm', 5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'file' => 'mail_campaign.admin.inc',
+    'type' => MENU_CALLBACK,
+  );  
+  
+  
+  
+  return $items;
+}  
+
+
+/**
+ * Implementation of hook_theme().
+ */
+function mail_campaign_theme() {
+  return array(
+    'mail_campaign_admin_page' => array(
+      'arguments' => array('mail_campaign' => NULL),
+    ),
+    'mail_campaign_email_admin_page' => array(
+      'arguments' => array('mail_campaign' => NULL),
+    ),
+    'mail_campaign_subscriptions_admin_page' => array(
+      'arguments' => array('mail_campaign' => NULL),
+    ),
+    
+  );
+}
+
+/**
+ * Return one E-mail Campaign.
+ */
+function mail_campaign_load($mail_campaign) {
+  $mail_campaign = db_fetch_object(db_query("SELECT * FROM {mail_campaign} WHERE mcid=%d limit 1", $mail_campaign));
+  return $mail_campaign;
+}
+
+/**
+ * Return one E-mail Campaign.
+ */
+function mail_campaign_mail_template_load($mail_campaign_mail_template) {
+  $mail_campaign_mail_template = db_fetch_object(db_query("SELECT * FROM {mail_campaign_mail_template} WHERE mcmtid=%d limit 1", $mail_campaign_mail_template));
+  return $mail_campaign_mail_template;
+}
+
+
+/**
+ * Return all E-mail Campaigns.
+ */
+function mail_campaign_get_mail_campaigns() {
+  $mail_campaigns = array();
+  
+  $result = db_query("SELECT * FROM {mail_campaign} ORDER BY campaign_mode desc");
+  while ($mail_campaign = db_fetch_object($result)) {
+    $mail_campaigns[] = $mail_campaign;
+  }
+  
+  return $mail_campaigns;
+}
+
+/**
+ * Return all mails contained in E-mail Campaigns.
+ */
+function mail_campaign_get_campaign_mails($mail_campaign) {
+  $mail_campaign_mails = array();  
+  $result = db_query("SELECT * FROM {mail_campaign_mail_template} where mcid = %d ORDER BY send_time asc", $mail_campaign->mcid);
+  while ($mail_campaign_mail = db_fetch_object($result)) {
+    $mail_campaign_mails[] = $mail_campaign_mail;
+  }  
+  return $mail_campaign_mails;
+}
+
+/**
+ * Return all subscribers to a campaign.
+ */
+function mail_campaign_get_subscribers($mail_campaign) {
+  $mail_campaign_subscribers = array();  
+  $result = db_query("SELECT * FROM {mail_campaign_user} a, {users} b where a.uid=b.uid and a.mcid = %d order by a.join_time desc", $mail_campaign->mcid);
+  while ($subscriber = db_fetch_object($result)) {
+    $mail_campaign_subscribers[] = $subscriber;
+  }  
+  return $mail_campaign_subscribers;
+}
+
+
+/**
+ * @file
+ * File description
+ *
+ * Long description
+ */
+/*
+ function mail_campaign_job_queue_functions() {
+  $functions['mail_campaign_send_mail'] = array(
+    'title' => t('Mail Campaign Send'),
+  );
+
+  return $functions;
+}
+*/
+
+
+/**
+ * hook_cron
+ */
+function mail_campaign_cron() {
+  // today's date as of midnight, exp. 04/16/09 12:00:00 am
+  define('MAIL_CAMPAIGN_CRONSTAMP', mktime(0, 0, 0, date('n'), date('j'), date('Y'), 0));
+
+  if (variable_get('mail_campaign_daily_cron', MAIL_CAMPAIGN_CRONSTAMP) != MAIL_CAMPAIGN_CRONSTAMP) {
+    variable_set('mail_campaign_daily_cron', TODAY);
+    // do whatever else you need   
+    mail_campaign_cron_process();    
+  }
+  
+}
+
+function mail_campaign_cron_process() {
+    
+    $modes = array(MAIL_CAMPAIGN_MODE_INACTIVE => 'Inactive', MAIL_CAMPAIGN_MODE_DEBUG => 'Debug', MAIL_CAMPAIGN_MODE_ACTIVE => 'Active');    
+    //get all mail campaigns that have mode debug or active
+    $mail_campaigns = db_query("SELECT * FROM {mail_campaign} WHERE campaign_mode > 0");
+    while($campaign = db_fetch_object($mail_campaigns)) {      
+
+      $debug_report = date('d/m/Y H:i:s') . '<br />Mail Campaign Debug Report: ' . $campaign->campaign_name . ' [mode=' . $campaign->campaign_mode . ']' . '<br />';
+      $mail_list = array();
+      //get mails in campaign
+      $mails = db_query("SELECT * FROM {mail_campaign_mail_template} a , {mail_template} b WHERE a.mtid=b.mtid and mcid=%d order by send_time asc", array($campaign->mcid));      
+      while($mail = db_fetch_object($mails)) {
+        if(count($mail_list) > 0) $mail_list[count($mail_list) - 1]->next = $mail->mcmtid;        
+        $mail_list[] = $mail;        
+      }
+      $debug_report .= 'Mails in campaign: ' . count($mail_list) . '<br />';
+      foreach($mail_list as $mail) {
+        $subscribers = db_query("SELECT * FROM {mail_campaign_user} WHERE mcid=%d and DATEDIFF(now(),from_unixtime(join_time)) = %d", array($campaign->mcid, $mail->send_time));      
+        $subscriber_cnt = 0;
+        while($subscriber = db_fetch_object($subscribers)){
+            if($subscriber->current_mail_template_id != $mail->mcmtid) {
+              $subscriber_cnt++;
+              switch($campaign->campaign_mode) {
+                case 1: //MAIL_CAMPAIGN_MODE_DEBUG
+                  //don't need to do anything here for now                  
+                  watchdog('mail campaign', 'Cron would queue email ' . $mail->title . ' [' . $mail->mcmtid . '] for ['.$subscriber->uid.'] in campaign ' . $campaign->campaign_name . ' [mode=' . $modes[$campaign->campaign_mode] . ']');
+                break;
+                case 2: //MAIL_CAMPAIGN_MODE_ACTIVE
+                  //lets queue
+                  watchdog('mail campaign','Queued email ' . $mail->title . ' [' . $mail->mcmtid . '] for [' . $subscriber->uid . '] in campaign ' . $campaign->campaign_name . ' [mode=' . $campaign->campaign_mode . ']');
+                  job_queue_add('mail_campaign_send_mail', 'Queued sending of Campaign Email', array($subscriber->uid, $campaign->mcid, $mail->mcmtid), '', TRUE);                    
+                break;
+              }
+              //queue him up    
+            }
+        }
+        $debug_report .= 'Total Subscribers to receive email [' . $mail->title . '] in campaign [' . $campaign->campaign_name . ']: ' . $subscriber_cnt . '<br />';
+      }
+    
+    }
+    watchdog('mail campaign', $debug_report);
+}
+
+/*
+ * We need to act as the recipient's user in order to have tokens substituted correctly.
+ *
+ */
+function mail_campaign_send_mail($uid, $mcid, $mcmtid){
+  global $user;
+  $original_user = $user;
+  $old_state = session_save_session();
+  session_save_session(FALSE);
+  $user = user_load(array('uid' => $uid));
+  
+  //$campaign = mail_campaign_load($mcid);
+  $mail_campaign_email = mail_campaign_mail_template_load($mcmtid);
+  $mail_template = db_fetch_object(db_query("SELECT * FROM {mail_template} WHERE mtid=%d", $mail_campaign_email->mtid));
+  
+  $mail_template_prepared = mail_template($mail_template->name);
+  if (!$mail_template_prepared) {
+    watchdog('mail_campaign', 'Unable to load Mail Template %name.', array('%name' => $mail_template->name));
+    return;
+  }
+
+  $from = variable_get('site_mail', $GLOBALS['site_mail']);
+  
+  $status = mimemail($from, $user, $mail_template_prepared['subject'], $mail_template_prepared['message_html'], NULL, array(), $mail_template_prepared['message_plaintext'], $mail_template_prepared['attachments'], $mail_template_prepared['key']);
+  if (!empty($status)) {
+    db_query('update {mail_campaign_user} set current_mail_template_id = %d where uid = %d and mcid = %d;', array($mcmtid, $uid, $mcid));
+  }
+  
+  $user = $original_user;
+  session_save_session($old_state);
+
+  // From here on the $user is back to normal so it's OK for the session to be saved  
+}
+
+function mail_campaign_subscribe_user($uid, $mcid) {
+  $check = db_result(db_query('select join_time from {mail_campaign_user} where uid = %d and mcid = %d', array($uid, $mcid)));
+  $mail_campaign = mail_campaign_load($mcid);
+  if(!$check && $mail_campaign) {
+      db_query('insert into {mail_campaign_user} (uid, mcid, join_time) VALUES (%d,%d,%d);', array($uid, $mcid, time()));
+      $user = user_load($uid);
+      rules_invoke_event('mail_campaign_user_subscribed', $user, $mail_campaign->mcid);
+      return true;  
+  }
+  return false;
+}
+
+function mail_campaign_unsubscribe_user($uid, $mcid) {
+  $check = db_result(db_query('select join_time from {mail_campaign_user} where uid = %d and mcid = %d', array($uid, $mcid)));
+  $mail_campaign = mail_campaign_load($mcid);
+  if(!$check && $mail_campaign) {
+      db_query('delete from {mail_campaign_user} where uid = %d and mcid = %d;', array($uid, $mcid));
+      return true;  
+  }
+  return false;
+}
+
+

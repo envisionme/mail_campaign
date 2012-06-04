@@ -1,0 +1,100 @@
+<?php
+
+function mail_campaign_install() {
+  drupal_install_schema('mail_campaign');
+}
+
+function mail_campaign_uninstall() {
+  drupal_uninstall_schema('mail_campaign');
+  variable_del('mail_campaign_daily_cron');
+}
+
+function mail_campaign_schema() {
+
+$schema['mail_campaign'] = array(
+  'description' => t('TODO: please describe this table!'),
+  'fields' => array(
+    'mcid' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'serial',
+      'not null' => TRUE,
+    ),
+    'campaign_name' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'varchar',
+      'length' => '255',
+      'not null' => TRUE,
+    ),
+    'campaign_mode' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'length' => '1',
+      'not null' => TRUE,
+    ),    
+    'create_date' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'default' => 0,
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('mcid'),
+);
+$schema['mail_campaign_user'] = array(
+  'description' => t('TODO: please describe this table!'),
+  'fields' => array(
+    'mcid' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'uid' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'default' => 0,
+      'not null' => TRUE,
+    ),
+    'current_mail_template_id' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'join_time' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('mcid', 'uid'),
+);
+$schema['mail_campaign_mail_template'] = array(
+  'description' => t('TODO: please describe this table!'),
+  'fields' => array(
+    'mcmtid' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'serial',
+      'not null' => TRUE,
+    ),    
+    'mcid' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'default' => 0,
+      'not null' => TRUE,      
+    ),
+    'mtid' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'default' => 0,
+      'not null' => TRUE,      
+    ),
+    'send_time' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('mcmtid'),
+);   
+  return $schema;
+}
+
