@@ -1,9 +1,5 @@
 <?php
 
-define('MAIL_CAMPAIGN_MODE_INACTIVE', 0);
-define('MAIL_CAMPAIGN_MODE_DEBUG', 1);
-define('MAIL_CAMPAIGN_MODE_ACTIVE', 2);
-
 /**
  * @file
  * Contains administrative pages for creating, editing, and deleting mail campaigns.
@@ -324,10 +320,21 @@ function mail_campaign_remove_email_confirm_submit($form, &$form_state) {
  * Mail Campaign administration page. Display a list of existing Mail Campaigns.
  */
 function mail_campaign_campaign_admin($mail_campaign) {
+  drupal_set_title($mail_campaign->campaign_name);
+  $modes = array(MAIL_CAMPAIGN_MODE_INACTIVE => 'Inactive', MAIL_CAMPAIGN_MODE_DEBUG => 'Debug', MAIL_CAMPAIGN_MODE_ACTIVE => 'Active');      
+  $output = '<b>Mode</b> ' . $modes[$mail_campaign->campaign_mode] .  '<br />';
+  if (variable_get('mail_campaign_daily_cron', MAIL_CAMPAIGN_CRONSTAMP) != MAIL_CAMPAIGN_CRONSTAMP){
+    $output .= '<b>Cron</b> Cron has not run for today<br />';
+  }
+  else {
+    $output .= '<b>Cron</b> Cron has run for today</b><br />';
+  }  
+  $mails = db_result(db_query("SELECT count(*) as count FROM {mail_campaign_mail_template} a , {mail_template} b WHERE a.mtid=b.mtid and mcid=%d order by send_time asc", array($mail_campaign->mcid)));      
+  $subscribers = db_result(db_query("SELECT count(*) FROM {mail_campaign_user} WHERE mcid=%d", array($mail_campaign->mcid)));      
+  $output .= '<b>Mails in campaign:</b> ' . $mails . '<br />';
+  $output .= '<b>Subscribers in campaign:</b> ' . $subscribers . '<br />';    
   
-  //$output = mail_template('welcome',null,array('user'=>7));
-  
-  return 'Show campaign overview here - how many emails,stats etc<br /><br />';
+  return $output;
 }
 
 
