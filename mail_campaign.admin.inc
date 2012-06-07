@@ -136,7 +136,7 @@ function theme_mail_campaign_subscriptions_admin_page($mail_campaign) {
   while ($subscriber = db_fetch_object($query)) {  
     $mail_template = '-';
     if($subscriber->current_mail_template_id > 0)
-      $mail_template = db_fetch_result(db_query("SELECT title FROM {mail_template} WHERE mtid=%d", $subscriber->current_mail_template_id));      
+      $mail_template = db_result(db_query("SELECT title FROM {mail_template} WHERE mtid=%d", $subscriber->current_mail_template_id));      
 
     
     $rows[] = array(
