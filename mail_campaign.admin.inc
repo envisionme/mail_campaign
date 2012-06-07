@@ -320,6 +320,8 @@ function mail_campaign_remove_email_confirm_submit($form, &$form_state) {
  * Mail Campaign administration page. Display a list of existing Mail Campaigns.
  */
 function mail_campaign_campaign_admin($mail_campaign) {
+  define('MAIL_CAMPAIGN_CRONSTAMP', mktime(0, 0, 0, date('n'), date('j'), date('Y'), 0));
+
   drupal_set_title($mail_campaign->campaign_name);
   $modes = array(MAIL_CAMPAIGN_MODE_INACTIVE => 'Inactive', MAIL_CAMPAIGN_MODE_DEBUG => 'Debug', MAIL_CAMPAIGN_MODE_ACTIVE => 'Active');      
   $output = '<b>Mode</b> ' . $modes[$mail_campaign->campaign_mode] .  '<br />';
