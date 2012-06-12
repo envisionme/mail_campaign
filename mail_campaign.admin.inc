@@ -126,9 +126,9 @@ function theme_mail_campaign_subscriptions_admin_page($mail_campaign) {
     array('data' => t('User'), 'field' => 'name'),
     t('Last mail sent'),
     t('Subscribed'),
-
+	t('Days since subscription')
     );
-  $sql = "SELECT b.name, b.mail, a.current_mail_template_id, a.join_time FROM {mail_campaign_user} a, {users} b where a.uid=b.uid and a.mcid = %d";
+  $sql = "SELECT a.uid, b.name, b.mail, a.current_mail_template_id, a.join_time FROM {mail_campaign_user} a, {users} b where a.uid=b.uid and a.mcid = %d";
   
   $rowcount = 25;
   $query = pager_query($sql . tablesort_sql($header), $rowcount, 0, NULL, $mail_campaign->mcid);    
@@ -143,7 +143,7 @@ function theme_mail_campaign_subscriptions_admin_page($mail_campaign) {
       l($subscriber->name, 'user/' . $subscriber->uid),
       $mail_template,
       date('d/m/Y',$subscriber->join_time),
-
+	  floor((time() - $subscriber->join_time)/(60*60*24))
     );  
   }
   

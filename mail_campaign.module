@@ -122,6 +122,33 @@ function mail_campaign_menu() {
     'type' => MENU_CALLBACK,
   );
   
+  $items['admin/build/mail_campaign/sub/%/%'] = array(
+    'title' => 'Mail Campaign Cron Test',
+    'page callback' => 'mail_campaign_subscribe_user',
+    'page arguments' => array(4,5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/build/mail_campaign/unsub/%/%'] = array(
+    'title' => 'Mail Campaign Cron Test',
+    'page callback' => 'mail_campaign_unsubscribe_user',
+    'page arguments' => array(4,5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  
+  $items['admin/build/mail_campaign/cron_test/%'] = array(
+    'title' => 'Mail Campaign Cron Test',
+    'page callback' => 'mail_campaign_cron_process',
+    'page arguments' => array(4),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer mail template'),
+    'type' => MENU_CALLBACK,
+  );
   
   return $items;
 }  
@@ -224,22 +251,23 @@ function mail_campaign_get_subscribers($mail_campaign) {
 function mail_campaign_cron() {
   // today's date as of midnight, exp. 04/16/09 12:00:00 am
   define('MAIL_CAMPAIGN_CRONSTAMP', mktime(0, 0, 0, date('n'), date('j'), date('Y'), 0));
-
+  
   if (variable_get('mail_campaign_daily_cron', MAIL_CAMPAIGN_CRONSTAMP) != MAIL_CAMPAIGN_CRONSTAMP) {
     variable_set('mail_campaign_daily_cron', MAIL_CAMPAIGN_CRONSTAMP);
     mail_campaign_cron_process();    
+	watchdog('mail_campaign','Todays cron has been processed at '.date('d/m/Y H:i:s'));
   }
   
 }
 
 function mail_campaign_cron_process($test = 0) {
     
-    $modes = array(MAIL_CAMPAIGN_MODE_INACTIVE => 'Inactive', MAIL_CAMPAIGN_MODE_DEBUG => 'Debug', MAIL_CAMPAIGN_MODE_ACTIVE => 'Active');    
+    $modes = array(0 => 'Inactive', 1 => 'Debug', 2 => 'Active');    
     //get all mail campaigns that have mode debug or active
     $mail_campaigns = db_query("SELECT * FROM {mail_campaign} WHERE campaign_mode > 0");
     while($campaign = db_fetch_object($mail_campaigns)) {      
 
-      $debug_report = date('d/m/Y H:i:s') . '<br />Mail Campaign Debug Report: ' . $campaign->campaign_name . ' [mode=' . $campaign->campaign_mode . ']' . '<br />';
+      $debug_report = date('d/m/Y H:i:s') . '<br />Mail Campaign Debug Report: ' . $campaign->campaign_name . ' [mode=' . $modes[$campaign->campaign_mode] . ']' . '<br />';
       $mail_list = array();
       //get mails in campaign
       $mails = db_query("SELECT * FROM {mail_campaign_mail_template} a , {mail_template} b WHERE a.mtid=b.mtid and mcid=%d order by send_time asc", array($campaign->mcid));      
@@ -255,11 +283,11 @@ function mail_campaign_cron_process($test = 0) {
             if($subscriber->current_mail_template_id != $mail->mcmtid) {
               $subscriber_cnt++;
               switch($campaign->campaign_mode) {
-                case 1: //MAIL_CAMPAIGN_MODE_DEBUG
+                case 1: //MAIL_CAMPAIGN_MODE_DEBUG:
                   //don't need to do anything here for now                  
                   watchdog('mail campaign', 'Cron would queue email ' . $mail->title . ' [' . $mail->mcmtid . '] for ['.$subscriber->uid.'] in campaign ' . $campaign->campaign_name . ' [mode=' . $modes[$campaign->campaign_mode] . ']');
                 break;
-                case 2: //MAIL_CAMPAIGN_MODE_ACTIVE
+                case 2: //MAIL_CAMPAIGN_MODE_ACTIVE:
                   //lets queue
                   watchdog('mail campaign','Queued email ' . $mail->title . ' [' . $mail->mcmtid . '] for [' . $subscriber->uid . '] in campaign ' . $campaign->campaign_name . ' [mode=' . $campaign->campaign_mode . ']');
                   job_queue_add('mail_campaign_send_mail', 'Queued sending of Campaign Email', array($subscriber->uid, $campaign->mcid, $mail->mcmtid), '', TRUE);                    
@@ -301,8 +329,13 @@ function mail_campaign_send_mail($uid, $mcid, $mcmtid){
 	'name' => variable_get('site_name',''),
 	'mail' => variable_get('site_mail','')
   );
-    
-  $status = mimemail($from, $user, $mail_template_prepared['subject'], $mail_template_prepared['message_html'], NULL, array(), $mail_template_prepared['message_plaintext'], $mail_template_prepared['attachments'], $mail_template_prepared['key']);
+
+  // We do this to get the correct headers and params.
+  $message = drupal_mail('mail_campaign', $mail_template_prepared['key'], $user, user_preferred_language($user), NULL, NULL, FALSE);
+  $message['body'] = $mail_template_prepared['message_html'];
+  $message['subject'] = $mail_template_prepared['subject'];
+  
+  $status = mimemail($message['from'], $message['to'], $mail_template_prepared['subject'], $mail_template_prepared['message_html'], NULL, $message['headers'], $mail_template_prepared['message_plaintext'], $mail_template_prepared['attachments'], $mail_template_prepared['key']);
   if (!empty($status)) {
     db_query('update {mail_campaign_user} set current_mail_template_id = %d where uid = %d and mcid = %d;', array($mcmtid, $uid, $mcid));
   }
@@ -320,16 +353,19 @@ function mail_campaign_subscribe_user($uid, $mcid) {
       db_query('insert into {mail_campaign_user} (uid, mcid, join_time) VALUES (%d,%d,%d);', array($uid, $mcid, time()));
       $user = user_load($uid);
       rules_invoke_event('mail_campaign_user_subscribed', $user, $mail_campaign->mcid);
+	  watchdog('mail_campaign', 'User %name subscribed to Campaign %campaign.', array('%name' => $user->name, '%campaign' => $mail_campaign->campaign_name));
       return true;  
   }
   return false;
 }
 
-function mail_campaign_unsubscribe_user($uid, $mcid) {
+function mail_campaign_unsubscribe_user($uid, $mcid) {  
   $check = db_result(db_query('select join_time from {mail_campaign_user} where uid = %d and mcid = %d', array($uid, $mcid)));
   $mail_campaign = mail_campaign_load($mcid);
-  if(!$check && $mail_campaign) {
-      db_query('delete from {mail_campaign_user} where uid = %d and mcid = %d;', array($uid, $mcid));
+  if($check && $mail_campaign) {
+      $user = user_load($uid);
+	  db_query('delete from {mail_campaign_user} where uid = %d and mcid = %d;', array($uid, $mcid));
+	  watchdog('mail_campaign', 'User %name unsubscribed from Campaign %campaign.', array('%name' => $user->name, '%campaign' => $mail_campaign->campaign_name));
       return true;  
   }
   return false;
