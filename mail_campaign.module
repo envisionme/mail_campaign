@@ -225,7 +225,6 @@ function mail_campaign_cron() {
   // today's date as of midnight, exp. 04/16/09 12:00:00 am
   define('MAIL_CAMPAIGN_CRONSTAMP', mktime(0, 0, 0, date('n'), date('j'), date('Y'), 0));
 
-
   if (variable_get('mail_campaign_daily_cron', MAIL_CAMPAIGN_CRONSTAMP) != MAIL_CAMPAIGN_CRONSTAMP) {
     variable_set('mail_campaign_daily_cron', MAIL_CAMPAIGN_CRONSTAMP);
     mail_campaign_cron_process();    
@@ -298,8 +297,11 @@ function mail_campaign_send_mail($uid, $mcid, $mcmtid){
     return;
   }
 
-  $from = variable_get('site_mail', $GLOBALS['site_mail']);
-  
+  $from = array(
+	'name' => variable_get('site_name',''),
+	'mail' => variable_get('site_mail','')
+  );
+    
   $status = mimemail($from, $user, $mail_template_prepared['subject'], $mail_template_prepared['message_html'], NULL, array(), $mail_template_prepared['message_plaintext'], $mail_template_prepared['attachments'], $mail_template_prepared['key']);
   if (!empty($status)) {
     db_query('update {mail_campaign_user} set current_mail_template_id = %d where uid = %d and mcid = %d;', array($mcmtid, $uid, $mcid));

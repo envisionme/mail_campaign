@@ -142,7 +142,7 @@ function theme_mail_campaign_subscriptions_admin_page($mail_campaign) {
     $rows[] = array(
       l($subscriber->name, 'user/' . $subscriber->uid),
       $mail_template,
-      date('d/m/y',$subscriber->join_time),
+      date('d/m/Y',$subscriber->join_time),
 
     );  
   }
