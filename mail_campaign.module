@@ -113,15 +113,6 @@ function mail_campaign_menu() {
     'type' => MENU_CALLBACK,
   );  
   
-  $items['admin/build/mail_campaign/cron_test/%'] = array(
-    'title' => 'Mail Campaign Cron Test',
-    'page callback' => 'mail_campaign_cron_process',
-    'page arguments' => array(4),
-    'access callback' => 'user_access',
-    'access arguments' => array('administer mail template'),
-    'type' => MENU_CALLBACK,
-  );
-  
   $items['admin/build/mail_campaign/sub/%/%'] = array(
     'title' => 'Mail Campaign Cron Test',
     'page callback' => 'mail_campaign_subscribe_user',

@@ -2,6 +2,7 @@
 
 function mail_campaign_install() {
   drupal_install_schema('mail_campaign');
+  variable_set('mail_campaign_daily_cron',0);
 }
 
 function mail_campaign_uninstall() {
